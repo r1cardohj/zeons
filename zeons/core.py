@@ -2,10 +2,14 @@
     Lisence:MIT
     Date:20230928
 """
-import typing as t
+
 from typing import Any
-from error import HttpException
+from .error import HttpException,ResponseTypeException,RouteNotFoundException
 from wsgiref.simple_server import make_server
+from collections.abc import Iterable
+from urllib.parse import parse_qs
+from enum import Enum 
+import json
 
 class Zeons:
     """Zeons is a flask like framework,
@@ -91,6 +95,12 @@ class Zeons:
     def wsgi_app(self,environ, start_response):
         """a wsgi application callable"""
         request = self._make_request(environ)
+        response = self.deal_request_and_get_response(request)
+        response.finish_response_make()
+        reason = response.err_why or ('OK' if response.status_code == 200 else 'N/A')
+        headers_list = [(k,v) for k,v in response.headers.items()]
+        start_response(str(response.status_code)+ ' ' + reason,headers_list)
+        return response.gen_body()
         
     
     
@@ -102,6 +112,60 @@ class Zeons:
         """ parse envrion and make Request obj"""
         return Request.make_request_by_environ(self,environ)
     
+    
+    def find_route_and_get_func(self,request):
+        """find the view func if exist
+            else return None
+        """
+        method = request.method.upper()
+        methods = []
+        if method in ('GET','POST'):
+            try:
+                if request.path == '/favicon.ico':
+                    return None
+                methods,func =  self.url_map[request.path] 
+            except KeyError:
+                pass
+            if method in methods:
+                    return func
+            return None
+            
+    
+    def deal_request_and_get_response(self,request):
+        """handle a request and get response"""
+        if request:
+            f = self.find_route_and_get_func(request)
+            if not f:
+                resp =  'Not Found',404
+            else:
+                try:
+                    callable(f)
+                    response = f(request)
+                    if isinstance(response,tuple) \
+                        and len(response) == 2:
+                        resp = Response(response[0],int(response[1])) # body and status code
+                    elif isinstance(response,Response):
+                        resp = response
+                    else:
+                        resp = Response(response)
+                except HttpException as e:
+                    if e.status_code in self.error_handlers:
+                        resp = self.error_handlers[e.status_code]
+                    else:
+                        resp = e.why,e.status_code
+                except Exception as e:
+                    print(f'{e!r}')
+                    resp = e.why,500    
+        else:
+            resp = 'Bad request',400
+        
+        if isinstance(resp, tuple):
+            resp = Response(*resp)
+        elif not isinstance(resp, Response):
+            resp = Response(resp)
+        
+        return resp
+                         
 
 
 
@@ -115,6 +179,7 @@ class Z(dict):
 class Request:
     """parse http request  and make it easy
     """
+    
     
     def __init__(self,
                  app,
@@ -147,7 +212,7 @@ class Request:
         
         if '?' in self.url: 
             self.path,self.query_str = self.url.split('?')
-            self.args = self._query_str_to_args(self.query_str) if self.query_str else {}
+            self.args = parse_qs(self.query_str) if self.query_str else {}
         
         if 'CONTENT-LENGTH' in self.headers:
             self.content_length = int(self.headers['CONTENT-LENGTH'])
@@ -185,10 +250,10 @@ class Request:
         # like   HTTP_ACCEPT to ACCEPT
         #        HTTP_ACCEPT_ENCODING to ACCEPT-ENCODING         
         for key,value in environ.items():
-           if key.startswith('HTTP_'):
-               header_key_list = key.replace('_','-').split('-')
-               header_key_str = '-'.join(header_key_list[1:])
-               headers[header_key_str] = value
+            if key.startswith('HTTP_'):
+                header_key_list = key.replace('_','-').split('-')
+                header_key_str = '-'.join(header_key_list[1:])
+                headers[header_key_str] = value
         
         req = Request(
             app=app,
@@ -203,29 +268,124 @@ class Request:
         return req
     
     
-    def _query_str_to_args(query_str:str):
-        """ parse url's query_str to a dict"""
-        args = {}
-        pres = [item for item in query_str.split('&')]
-        for pre in pres:
-            k,v = pre.split['=']
-            args[k] = v
-        
-        return args
-    
-    
     @property
     def body(self):
         """ request's body,"""
+        if not self._body:
+            self._body = b''
+            if self.content_length:
+                while len(self._body) < self.content_length:
+                    data = self._stream.read(self.content_length - len(self._body))
+                    self._body += data
+        return self._body
+    
     
     @property
     def json(self):
         """ simple way to get body's json"""
-        
+        if not self._json:
+            if not self.content_type:
+                return None
+            mime_type = self.content_type.split(';')[0]
+            if mime_type != 'application/json':
+                return None
+            self._json = json.loads(self.body.decode())
+        return self._json
     
+     
     @property
     def form(self):
         """simple way to get body's form"""
+        if not self._form:
+            if not self.content_type:
+                return None
+            mime_type = self.content_type.split(';')[0]
+            if mime_type != 'application/x-www-form-urlencoded':
+                return None
+            self._form = parse_qs(self.body.decode())
+        return self._form
+    
+    
+
+        
         
     
         
+
+class Response:
+    """ Http Response"""
+    
+    max_one_time_buffer_size = 1024
+    
+    class ContentTypes(Enum):
+        CSS = 'text/css'
+        GIF = 'image/gif'
+        HTML = 'text/html'
+        JPG = 'image/jpge'
+        JS = 'application/javascript'
+        JSON = 'application/json'
+        PNG = 'image/png'
+        TXT = 'text/plain'
+    
+    default_content_type = ContentTypes.TXT.value
+    
+    def __init__(self,
+                 body=None,
+                 status_code=200,
+                 headers=None,
+                 err_why=None) -> None:
+        self.status_code =status_code
+        self.headers = headers
+        self.err_why = err_why
+        if not self.headers:
+            self.headers = {}
+        if isinstance(body,(dict,list)):
+            self.body = json.dumps(body).encode()
+            self.headers['Content-Type'] = 'application/json; charset=UTF-8'
+        elif isinstance(body,str):
+            self.body = body.encode()
+        elif isinstance(body,bytes):
+            self.body = body
+        else:
+            raise ResponseTypeException('response type must be dict,list,str or bytes')
+    
+    
+    def set_cookies(self): #TODO 
+        pass
+    
+    
+    def finish_response_make(self):
+        self._fix_content_length()
+        self._fix_content_type()
+        
+    
+    
+    def _fix_content_length(self):
+        """fix Content-Length """
+        if 'Content-Length' not in self.headers:
+            self.headers['Content-Length'] =  str(len(self.body))
+        
+    
+    def _fix_content_type(self):
+        """fix Content-Type"""
+        if 'Content-Type' not in self.headers:
+            self.headers['Content-Type'] =  self.default_content_type
+            if 'charset=' not in self.headers['Content-Type']:
+                self.headers['Content-Type'] += '; charset=UTF-8'
+    
+    def gen_body(self):
+        if hasattr(self.body,'read'):
+            while True:
+                buf = self.body.read(self.max_one_time_buffer_size)
+                if len(buf):
+                    yield buf
+                if len(buf) < self.max_one_time_buffer_size:
+                    break
+                if hasattr(self.body, 'close'):  
+                    self.body.close()
+        elif hasattr(self.body,'__next__'):
+            yield from self.body
+        else:
+            yield self.body
+    
+    

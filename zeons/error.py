@@ -15,3 +15,15 @@ class HttpException(BaseException):
     
     def __repr__(self):
         return f'HttpException:{self.status_code}.{self.why} '
+    
+
+class RouteNotFoundException(HttpException):
+    pass
+
+
+# Type Error
+class TypeException(Exception):
+    pass
+
+class ResponseTypeException(TypeException):
+    pass
