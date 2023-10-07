@@ -17,13 +17,13 @@ it will have other feature in future like:
 **Quick Start**
 
 ``` python
-from zeons import Zeons
+from zeons import Zeons,simple_render
 
 app = Zeons()
 
 @app.get('/')
 def index(req):
-    return '<h1>hello world</h1>'
+    return simple_render('index.html',name='whoami',age=18)
 
 if __name__ == '__main__':
     app.run()
