@@ -6,7 +6,6 @@
 from typing import Any
 from .error import HttpException,ResponseTypeException,RouteNotFoundException
 from wsgiref.simple_server import make_server
-from collections.abc import Iterable
 from urllib.parse import parse_qs
 from enum import Enum 
 import json
@@ -21,14 +20,13 @@ class Zeons:
             app = Zeons()
             @app.get()
             def index():
-                return 'zeons is running'
-            app.run()    
+                return '<h1>hello zeons</h1>'
     """
-    def __init__(self,name=__name__):
+    def __init__(self,name='app'):
         self.app_name = name
         self.url_map = {}
         self.before_request_handlers = []
-        self.after_request_handles = []
+        self.after_request_handlers = []
         
         self.config = {}
         self.error_handlers = {}
@@ -179,8 +177,6 @@ class Z(dict):
 class Request:
     """parse http request  and make it easy
     """
-    
-    
     def __init__(self,
                  app,
                  client_addr,
@@ -292,7 +288,7 @@ class Request:
             self._json = json.loads(self.body.decode())
         return self._json
     
-     
+    
     @property
     def form(self):
         """simple way to get body's form"""
@@ -344,6 +340,7 @@ class Response:
             self.headers['Content-Type'] = 'application/json; charset=UTF-8'
         elif isinstance(body,str):
             self.body = body.encode()
+            self.headers['Content-Type'] = self.ContentTypes.HTML.value +'; charset=UTF-8'
         elif isinstance(body,bytes):
             self.body = body
         else:
