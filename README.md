@@ -4,9 +4,9 @@ a flask like wsgi app framework.
 
 now it have:
 
-* a fast router
-* a easy request obj
-* a simple template
+* a fast router.
+* a easy request obj.
+* a simple inner template and jinja2 support.
 
 it will have other feature in future like:
 
@@ -17,13 +17,13 @@ it will have other feature in future like:
 **Quick Start**
 
 ``` python
-from zeons import Zeons,simple_render
+from zeons import Zeons
 
 app = Zeons()
 
 @app.get('/')
 def index(req):
-    return simple_render('index.html',name='whoami',age=18)
+    return '<h1>hello zeons</h1>'
 
 if __name__ == '__main__':
     app.run()

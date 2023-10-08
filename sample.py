@@ -1,15 +1,13 @@
-from zeons import Zeons,simple_render
+from zeons import Zeons,simple_render,jinja_render
 
 app = Zeons()
 
 @app.get('/')
 def index(req):
-    
-    return render('index.html',name='bb')
+    return jinja_render('index.html',name='bb')
 
 @app.get('/method')
 def get_method(req):
-    
     return req.method
 
 if __name__ == '__main__':
