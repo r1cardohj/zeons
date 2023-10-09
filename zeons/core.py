@@ -5,6 +5,7 @@
 
 from typing import Any
 from .error import HttpException,ResponseTypeException,RouteNotFoundException
+from .template import simple_render
 from wsgiref.simple_server import make_server
 from urllib.parse import parse_qs
 from enum import Enum 
@@ -29,6 +30,7 @@ class Zeons:
         self.after_request_handlers = []
         
         self.config = {}
+        self.config['DEFAULT_RENDER'] = simple_render
         self.error_handlers = {}
         self.server = None
         
@@ -163,8 +165,34 @@ class Zeons:
             resp = Response(resp)
         
         return resp
-                         
 
+    def template(self,file_name):
+        """ select template to return.
+        view func should return a dict obj
+        for template render  
+        
+        Args:
+            file_name (str): [file_name].[type] like `index.html`
+        
+        example::
+        
+                from Zeons import zeons
+                
+                app = Zeons()
+                
+                @app.route('/')
+                @app.template('index.html')
+                def index():
+                    return {'name':'whoami'}                
+        
+        """
+        def decorator(func):
+            def decorated(*args,**kwargs):
+                params = func(*args,**kwargs)
+                s = self.config['DEFAULT_RENDER'](file_name,**params)
+                return s
+            return decorated
+        return decorator                 
 
 
 ####### Request and Response ##########

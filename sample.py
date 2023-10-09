@@ -1,10 +1,12 @@
-from zeons import Zeons,simple_render,jinja_render
+from zeons import Zeons
 
 app = Zeons()
 
+
 @app.get('/')
+@app.template('index.html')
 def index(req):
-    return jinja_render('index.html',name='bb')
+    return {'name':'hello'}
 
 @app.get('/method')
 def get_method(req):

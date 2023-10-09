@@ -22,8 +22,9 @@ from zeons import Zeons
 app = Zeons()
 
 @app.get('/')
+@app.template('index.html')
 def index(req):
-    return '<h1>hello zeons</h1>'
+    return {'name':'r1cardohj'}
 
 if __name__ == '__main__':
     app.run()
