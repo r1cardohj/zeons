@@ -8,7 +8,9 @@ from .error import HttpException,ResponseTypeException,RouteNotFoundException
 from .template import simple_render
 from wsgiref.simple_server import make_server
 from urllib.parse import parse_qs
-from enum import Enum 
+from enum import Enum
+from collections import namedtuple
+import re 
 import json
 
 class Zeons:
@@ -413,4 +415,35 @@ class Response:
         else:
             yield self.body
     
+
+Type_and_param = namedtuple('Type_and_param',['t','param'])
+
+class Route:
+    """ a obj include route rule,
+        it is used for url match
+        
+    exm::    
+        
+        >>> '/whoami/18' == Route('/<str:name>/<int:age>')
+        True
+        >>> hash('/whoami/18') == hash(Route('/<str:name>/<int:age>'))
+        True 
+    """
+    args_pattern = r'<(.*?)>'
     
+    def __init__(self,url_rule):
+        self.url_rule = url_rule
+        self.params = []
+        self.parse_url_params()    
+    
+    def parse_url_params(self):
+        matches = re.findall(self.args_pattern, self.url_rule)
+        if not matches:
+            for m in matches:
+                param_type,param = m.split(':') if len(m.split(':')) > 1 else (None,m)
+                item = Type_and_param(t=param_type,param=param)
+                self.params.append(item)
+    
+    #todo
+    
+        
