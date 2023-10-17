@@ -115,7 +115,7 @@ class TemplateZ:
             self.exp.append((exp_str,span))
 
     
-    def _make_exp_struct(self,begin_exp_item,end_exp_item):
+"""     def _make_exp_struct(self,begin_exp_item,end_exp_item):
         inner_exp_item_span = (begin_exp_item[1][1],end_exp_item[1][0])
         inner_exp_str = self.text[begin_exp_item[1][1]:end_exp_item[1][0]]
         inner_exp_item = (inner_exp_item_span,inner_exp_str)
@@ -152,14 +152,5 @@ class TemplateZ:
                 except IndexError:
                     raise TemplateException('miss endblock')
                     
+ """
 
-
-default = """${for p in projects}
-                <li>hello</li>
-            ${endfor}"""
-
-
-t = TemplateZ(default)
-t._find_exp()
-t._check_and_construct_exp()
-print(t.exp_structs)
