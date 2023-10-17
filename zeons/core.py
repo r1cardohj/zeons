@@ -424,20 +424,21 @@ class Route:
         
     exm::    
         
-        >>> '/whoami/18' == Route('/<str:name>/<int:age>')
+        >>> Route('/whoami/18') == Route('/<str:name>/<int:age>')
         True
-        >>> hash('/whoami/18') == hash(Route('/<str:name>/<int:age>'))
+        >>> hash(Route('/whoami/18')) == hash(Route('/<str:name>/<int:age>'))
         True 
     """
     args_pattern = r'<(.*?)>'
     
-    def __init__(self,url_rule):
-        self.url_rule = url_rule
+    def __init__(self,url:str):
+        self.url = url
+        url.find
         self.params = []
         self.parse_url_params()    
     
     def parse_url_params(self):
-        matches = re.findall(self.args_pattern, self.url_rule)
+        matches = re.findall(self.args_pattern, self.url)
         if not matches:
             for m in matches:
                 param_type,param = m.split(':') if len(m.split(':')) > 1 else (None,m)
