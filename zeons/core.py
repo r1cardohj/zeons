@@ -87,11 +87,14 @@ class Zeons:
         raise HttpException(status_code,why)
     
     
-    def run(self,host='127.0.0.1',port=5001,debug=False):
+    def run(self,host='127.0.0.1',port=5000,debug=False):
         """ just run a simple server by wsgiref moudel"""
         server = make_server(host,port,self)
         print(f"Server started on http://{host}:{port}")
-        server.serve_forever()
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print('abort')
     
     
     def wsgi_app(self,environ, start_response):
