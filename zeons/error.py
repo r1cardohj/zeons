@@ -11,7 +11,10 @@ class BaseHttpException(Exception):
         pass
     
     
-class HttpException(BaseException):
+class HttpException(BaseHttpException):
+    
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
     
     def __repr__(self):
         return f'HttpException:{self.status_code}.{self.why} '

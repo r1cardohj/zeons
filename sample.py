@@ -1,5 +1,4 @@
-from zeons import Zeons
-import urllib
+from zeons import Zeons,abort
 
 app = Zeons()
 
@@ -9,13 +8,21 @@ app = Zeons()
 def index(req):
     return {'name':'r1cardohj'}
 
+
 @app.get('/method')
 def get_method(req):
     return req.method
 
+
 @app.post('/post')
 def test_post(req):
-    return {'mes':12}
+    return [{'name':'zzj','age':12},{'name':'zzy','age':13}]
+
+
+@app.get('/test/error')
+def test_abort(req):
+    abort(404,'not found')
+    return {'mes':'nothing'}
 
 
 if __name__ == '__main__':

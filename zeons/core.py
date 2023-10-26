@@ -12,6 +12,7 @@ from enum import Enum
 from collections import namedtuple
 import re 
 import json
+import threading
 
 class Zeons:
     """Zeons is a flask like framework,
@@ -91,10 +92,16 @@ class Zeons:
         """ just run a simple server by wsgiref moudel"""
         server = make_server(host,port,self)
         print(f"Server started on http://{host}:{port}")
+        t = threading.Thread(target=server.serve_forever)
+        t.daemon = True
         try:
-            server.serve_forever()
-        except KeyboardInterrupt:
+            t.start()
+            while True:
+                t.join(1)
+        except KeyboardInterrupt:  
             print('abort')
+            server.server_close()
+
     
     
     def wsgi_app(self,environ, start_response):
@@ -126,8 +133,8 @@ class Zeons:
         methods = []
         if method in ('GET','POST'):
             try:
-                if request.path == '/favicon.ico':
-                    return None
+                #if request.path == '/favicon.ico':
+                #    return None
                 methods,func =  self.url_map[request.path] 
             except KeyError:
                 pass
@@ -141,7 +148,7 @@ class Zeons:
         if request:
             f = self.find_route_and_get_func(request)
             if not f:
-                resp =  'Not Found',404
+                resp =  '404 Not Found',404
             else:
                 try:
                     callable(f)
@@ -368,16 +375,20 @@ class Response:
         self.err_why = err_why
         if not self.headers:
             self.headers = {}
-        if isinstance(body,(dict,list)):
-            self.body = json.dumps(body).encode()
-            self.headers['Content-Type'] = 'application/json; charset=UTF-8'
-        elif isinstance(body,str):
-            self.body = body.encode()
-            self.headers['Content-Type'] = self.ContentTypes.HTML.value +'; charset=UTF-8'
-        elif isinstance(body,bytes):
-            self.body = body
+        if body:
+            if isinstance(body,(dict,list)):
+                self.body = json.dumps(body).encode()
+                self.headers['Content-Type'] = 'application/json; charset=UTF-8'
+            elif isinstance(body,str):
+                self.body = body.encode()
+                self.headers['Content-Type'] = self.ContentTypes.HTML.value +'; charset=UTF-8'
+            elif isinstance(body,bytes):
+                self.body = body
+            else:
+                raise ResponseTypeException('response type must be dict,list,str or bytes')
+        
         else:
-            raise ResponseTypeException('response type must be dict,list,str or bytes')
+            self.body = None
     
     
     def set_cookies(self): #TODO 
@@ -393,7 +404,7 @@ class Response:
     def _fix_content_length(self):
         """fix Content-Length """
         if 'Content-Length' not in self.headers:
-            self.headers['Content-Length'] =  str(len(self.body))
+            self.headers['Content-Length'] =  str(len(self.body)) if self.body else '0'
         
     
     def _fix_content_type(self):
@@ -416,38 +427,10 @@ class Response:
         elif hasattr(self.body,'__next__'):
             yield from self.body
         else:
-            yield self.body
+            yield self.body if self.body else b''
     
 
 Type_and_param = namedtuple('Type_and_param',['t','param'])
 
-class Route:
-    """ a obj include route rule,
-        it is used for url match
-        
-    exm::    
-        
-        >>> Route('/whoami/18') == Route('/<str:name>/<int:age>')
-        True
-        >>> hash(Route('/whoami/18')) == hash(Route('/<str:name>/<int:age>'))
-        True 
-    """
-    args_pattern = r'<(.*?)>'
-    
-    def __init__(self,url:str):
-        self.url = url
-        url.find
-        self.params = []
-        self.parse_url_params()    
-    
-    def parse_url_params(self):
-        matches = re.findall(self.args_pattern, self.url)
-        if not matches:
-            for m in matches:
-                param_type,param = m.split(':') if len(m.split(':')) > 1 else (None,m)
-                item = Type_and_param(t=param_type,param=param)
-                self.params.append(item)
-    
-    #todo
-    
-        
+
+
