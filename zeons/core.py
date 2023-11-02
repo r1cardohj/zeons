@@ -243,7 +243,6 @@ class Request:
         
         self.cookies = {}
         self.content_length = 0
-        self.content_type = None
         self.http_version = http_version
         
         if '?' in self.url: 
@@ -277,6 +276,9 @@ class Request:
         remote_port = int(environ.get('REMOTE_PORT','0'))
         http_version = environ.get('SERVER_PROTOCOL','')
         
+        content_type  = environ.get('CONTENT_TYPE','')
+        content_length = environ.get('CONTENT_LENGTH','')
+        
         # http header
         headers = {}
         # http stream
@@ -290,6 +292,9 @@ class Request:
                 header_key_list = key.replace('_','-').split('-')
                 header_key_str = '-'.join(header_key_list[1:])
                 headers[header_key_str] = value
+        
+        headers['CONTENT-TYPE'] = content_type
+        headers['CONTENT-LENGTH'] = content_length
         
         req = Request(
             app=app,

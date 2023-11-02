@@ -25,5 +25,12 @@ def test_abort(req):
     return {'mes':'nothing'}
 
 
+@app.route('/hello',methods=['post'])
+def test_form(req):
+    #print(req.form)
+    print(req.json['age'])
+    return req.json
+
+
 if __name__ == '__main__':
     app.run()
