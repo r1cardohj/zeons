@@ -277,7 +277,7 @@ class Request:
         http_version = environ.get('SERVER_PROTOCOL','')
         
         content_type  = environ.get('CONTENT_TYPE','')
-        content_length = environ.get('CONTENT_LENGTH','')
+        content_length = environ.get('CONTENT_LENGTH','') or 0
         
         # http header
         headers = {}
